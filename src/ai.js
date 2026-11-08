@@ -33,13 +33,16 @@ export async function askJson(system, user) {
   const mode = aiMode();
   if (mode === 'off') return null;
   const prompt = `${system}\nReply with one JSON object and nothing else.`;
-  try {
-    const text = mode === 'gemini'
-      ? await gemini(process.env.GEMINI_API_KEY, prompt, user)
-      : await claude(process.env.ANTHROPIC_API_KEY, prompt, user);
-    return JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
-  } catch (err) {
-    console.error(err.message);
-    return null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const text = mode === 'gemini'
+        ? await gemini(process.env.GEMINI_API_KEY, prompt, user)
+        : await claude(process.env.ANTHROPIC_API_KEY, prompt, user);
+      return JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+    } catch (err) {
+      console.error(`AI attempt ${attempt} failed: ${err.message}`);
+      if (attempt === 1) await new Promise((r) => setTimeout(r, 1500));
+    }
   }
+  return null;
 }

@@ -78,7 +78,7 @@ const say={
  mandate:d=>['Shopper signed the instruction',`"${esc(d.mandate.text)}"`],
  hold_created:d=>['Spending limit requested from PayPal',`Limit $${d.limit}. Order ${esc(d.orderId)}.`],
  hold_approved:d=>['PayPal is holding the limit',`Authorization ${esc(d.authorizationId)}. The agent cannot spend beyond it.`],
- page_view:d=>['Agent read a store page',`${esc(d.store)}: ${esc(d.visibleText)}${d.photo?' '+esc(d.photo):''}${d.hiddenText?`<br><span class="hidden-text">Hidden on the page: ${esc(d.hiddenText)}</span>`:''}`],
+ page_view:d=>['Agent read a store page',`${esc(d.store)}: ${esc(d.visibleText)}${d.photo?`<br>On the page but not visible to the agent: ${esc(d.photo)}`:''}${d.hiddenText?`<br><span class="hidden-text">Hidden on the page: ${esc(d.hiddenText)}</span>`:''}`],
  agent_decision:d=>[d.buy?`Agent chose ${esc(d.listing.name)} at $${d.listing.price}`:`Agent passed on ${esc(d.listing.name)}`,`Its reasoning: ${esc(d.reasoning)} (${d.decidedBy==='ai'?'decided by AI':'scripted'})`],
  gate:d=>[d.allowed?'Gate allowed the purchase':'Gate blocked the purchase',esc([...d.violations,...d.unverified].join(' ')||'Every rule was met.')],
  hold_voided:()=>['PayPal hold released','No money moved.'],
