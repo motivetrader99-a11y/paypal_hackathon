@@ -6,6 +6,7 @@ async function gemini(key, system, user) {
   const res = await fetch(`${base}/v1beta/models/${GEMINI_MODEL()}:generateContent`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+    signal: AbortSignal.timeout(15000),
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: 'user', parts: [{ text: user }] }],
@@ -20,6 +21,7 @@ async function claude(key, system, user) {
   const res = await fetch(`${process.env.ANTHROPIC_BASE || 'https://api.anthropic.com'}/v1/messages`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    signal: AbortSignal.timeout(15000),
     body: JSON.stringify({ model: CLAUDE_MODEL(), max_tokens: 800, system, messages: [{ role: 'user', content: user }] }),
   });
   if (!res.ok) throw new Error(`Claude request failed with ${res.status}`);

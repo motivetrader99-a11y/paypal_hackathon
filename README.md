@@ -49,6 +49,10 @@ To use the PayPal sandbox and AI, copy `.env.example` to `.env` and add your key
 | Release a blocked purchase | `POST /v2/payments/authorizations/{id}/void` |
 | Refund after a ruling | `POST /v2/payments/captures/{id}/refund` |
 
+## Hosting
+
+The live demo runs as a web service on [Render](https://render.com), the only sponsor tool used.
+
 ## AI used
 
 Google Gemini (`gemini-3.1-flash-lite` by default) does three jobs:

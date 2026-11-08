@@ -116,7 +116,9 @@ function draw(){
 async function act(a){busy=true;error='';draw();try{run=await api(`/api/runs/${run.id}/${a}`,'POST');seen=a==='tamper'?seen:seen;run.drop=true}catch(e){error=e.message}busy=false;draw()}
 async function start(id){
  document.querySelectorAll('.case').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===id));
- seen=0;error='';
+ seen=0;error='';run=null;
+ $('#tape').innerHTML='<p class="empty">Recording the purchase. The AI can take up to 30 seconds.</p>';
+ $('#bench').innerHTML='<h2>Ruling</h2><p>Waiting for the agent.</p>';
  try{run=await api('/api/runs','POST',{scenario:id});run.drop=true;draw()}catch(e){$('#bench').innerHTML=`<h2>Ruling</h2><p class="err">${esc(e.message)}</p>`}
 }
 (async()=>{
