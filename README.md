@@ -4,6 +4,16 @@ A flight recorder and instant court for AI shopping agents, built on PayPal.
 
 AI agents can already buy things. When one buys the wrong thing, nobody can easily prove what the shopper authorized, what the agent saw, or who should pay. Witness records that chain and settles the dispute through PayPal.
 
+**Live demo:** https://paypal-hackathon-rkh0.onrender.com (the free host can take up to a minute to wake up)
+
+## Try it
+
+1. Open the live demo and choose **The agent guesses wrong**.
+2. Click **Approve limit in PayPal** and log in with the sandbox buyer account listed in the Devpost testing notes.
+3. Back in Witness, click **File the buyer's claim** to see the ruling and the refund.
+4. Choose **A store tricks the agent** to see the gate stop a purchase after the AI falls for hidden text.
+5. On a delivered order, click **Rewrite the agent's reasoning** before filing the claim to see the record rejected.
+
 ## How it works
 
 1. **Signed instruction.** "Blue rain jacket, size M, under $60" becomes rules signed with Ed25519.
