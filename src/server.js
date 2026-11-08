@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { scenarios } from './scenarios.js';
 import { startRun, continueRun, fileClaim, tamper, getRun, view } from './engine.js';
 import { mode } from './paypal.js';
+import { aiMode } from './ai.js';
 
 const PORT = Number(process.env.PORT || 3000);
 const publicUrl = () => process.env.PUBLIC_URL || `http://localhost:${PORT}`;
@@ -18,7 +19,7 @@ export const server = createServer(async (req, res) => {
     }
     if (req.method === 'GET' && url.pathname === '/api/scenarios') {
       const list = Object.entries(scenarios).map(([id, s]) => ({ id, title: s.title, summary: s.summary, instruction: s.instruction }));
-      return json(res, 200, { scenarios: list, paypalMode: mode() });
+      return json(res, 200, { scenarios: list, paypalMode: mode(), aiMode: aiMode() });
     }
     if (req.method === 'POST' && url.pathname === '/api/runs') {
       let raw = '';
@@ -51,5 +52,5 @@ export const server = createServer(async (req, res) => {
 });
 
 if (import.meta.url.endsWith('/src/server.js')) {
-  server.listen(PORT, () => console.log(`Witness is running at http://localhost:${PORT} (payments: ${mode()})`));
+  server.listen(PORT, () => console.log(`Witness is running at http://localhost:${PORT} (payments: ${mode()}, AI: ${aiMode()})`));
 }

@@ -4,13 +4,15 @@ import { parseMandate, signMandate, checkPurchase } from './mandate.js';
 import { judge } from './verdict.js';
 import { scenarios } from './scenarios.js';
 import * as paypal from './paypal.js';
+import { decide } from './shopper.js';
+import { aiMode } from './ai.js';
 
 const runs = new Map();
 export const getRun = (id) => runs.get(id);
 
 export function view(run) {
   const { ledger, ...rest } = run;
-  return { ...rest, entries: ledger.entries, integrity: ledger.verify(), paypalMode: paypal.mode() };
+  return { ...rest, entries: ledger.entries, integrity: ledger.verify(), paypalMode: paypal.mode(), aiMode: aiMode() };
 }
 
 export async function startRun(scenarioId, publicUrl) {
@@ -44,7 +46,14 @@ export async function continueRun(run) {
   const { authorizationId } = await paypal.authorize(run.orderId);
   run.ledger.append('hold_approved', { authorizationId });
   run.ledger.append('page_view', scenario.page);
-  run.ledger.append('agent_decision', { listing: scenario.listing, reasoning: scenario.thought });
+  const choice = await decide(scenario);
+  run.ledger.append('agent_decision', { listing: scenario.listing, ...choice });
+  if (!choice.buy) {
+    await paypal.voidHold(authorizationId);
+    run.ledger.append('hold_voided', { authorizationId });
+    run.status = 'declined';
+    return run;
+  }
 
   const gate = checkPurchase(run.mandate, scenario.listing);
   run.ledger.append('gate', gate);

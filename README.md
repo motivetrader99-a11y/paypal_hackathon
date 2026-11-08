@@ -22,12 +22,12 @@ npm start     # http://localhost:3000
 npm test
 ```
 
-With no keys, payments are simulated and rulings use the built-in rules.
+With no keys, payments are simulated, the agent is scripted, and rulings use the built-in rules.
 
 To use the PayPal sandbox and AI, copy `.env.example` to `.env` and add your keys:
 
 - `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` from a sandbox app at developer.paypal.com
-- `ANTHROPIC_API_KEY`
+- `GEMINI_API_KEY` from Google AI Studio (free tier). `ANTHROPIC_API_KEY` also works.
 
 ## PayPal APIs used
 
@@ -41,7 +41,13 @@ To use the PayPal sandbox and AI, copy `.env.example` to `.env` and add your key
 
 ## AI used
 
-Claude turns the shopper's instruction into rules and rules on disputes. The shopping agent in the demo follows a script so each case can be repeated.
+Google Gemini (`gemini-3.1-flash-lite` by default) does three jobs:
+
+- Turns the shopper's instruction into purchase rules.
+- Acts as the shopping agent, reading the raw store page and deciding whether to buy. It is deliberately under-guarded, to model the kind of agent Witness exists to catch.
+- Rules on disputes and cites the record entries behind each ruling.
+
+The interface shows whether each decision came from AI or from the fallback script and rules.
 
 ## License
 

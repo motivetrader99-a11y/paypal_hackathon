@@ -5,7 +5,7 @@ import { Ledger } from '../src/ledger.js';
 import { parseWithRules, signMandate, checkPurchase } from '../src/mandate.js';
 import { startRun, continueRun, fileClaim, tamper } from '../src/engine.js';
 
-const noCreds = () => { for (const k of ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_SECRET', 'ANTHROPIC_API_KEY', 'PAYPAL_BASE', 'ANTHROPIC_BASE']) delete process.env[k]; };
+const noCreds = () => { for (const k of ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_SECRET', 'ANTHROPIC_API_KEY', 'PAYPAL_BASE', 'ANTHROPIC_BASE', 'GEMINI_API_KEY', 'GEMINI_BASE']) delete process.env[k]; };
 const types = (r) => r.ledger.entries.map((e) => e.type);
 
 test('ledger detects an edited entry', () => {
@@ -87,6 +87,33 @@ test('sandbox flow makes the expected PayPal calls', async () => {
     assert.equal(posts[2].body.amount.value, '54.00');
     assert.equal(posts[3].body.amount.value, '54.00');
     assert.ok(posts[3].headers['paypal-request-id']);
+  } finally { s.close(); noCreds(); }
+});
+
+const gemini = (obj) => (u) => (u.includes('generateContent') ? { candidates: [{ content: { parts: [{ text: JSON.stringify(obj) }] } }] } : {});
+
+test('Gemini shopper can decline, and the hold is released', async () => {
+  noCreds();
+  const { s, calls, url } = await fake(gemini({ buy: false, reasoning: 'Not sure.' }));
+  Object.assign(process.env, { GEMINI_API_KEY: 'k', GEMINI_BASE: url });
+  try {
+    const r = await startRun('agentError', 'http://t');
+    assert.equal(r.status, 'declined');
+    assert.ok(types(r).includes('hold_voided'));
+    assert.equal(calls[0].headers['x-goog-api-key'], 'k');
+    assert.match(calls[0].path, /gemini-3\.1-flash-lite:generateContent/);
+  } finally { s.close(); noCreds(); }
+});
+
+test('agent page view excludes the photo and AI ruling refunds when it agrees', async () => {
+  noCreds();
+  const { s, calls, url } = await fake(gemini({ buy: true, reasoning: 'Fits.', item: 'jacket', color: 'blue', size: 'M', maxPrice: 60, fault: 'agent', decision: 'refund', cited: [1, 5] }));
+  Object.assign(process.env, { GEMINI_API_KEY: 'k', GEMINI_BASE: url });
+  try {
+    const r = await fileClaim(await startRun('agentError', 'http://t'));
+    assert.equal(r.status, 'refunded');
+    assert.equal(r.verdict.source, 'ai');
+    assert.ok(!calls[1].body.contents[0].parts[0].text.includes('green'));
   } finally { s.close(); noCreds(); }
 });
 
