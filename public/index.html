@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Witness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--housing:#FF5A00;--housing-ink:#2A1200;--tape:#E4EAF0;--paper:#FBFCFD;--ink:#16233B;--soft:#566378;--line:#C5CFDA;--good:#08704F;--bad:#B3261E;--wait:#8A5A00}
+*{box-sizing:border-box}
+body{margin:0;background:var(--tape);color:var(--ink);font:17px/1.5 "Atkinson Hyperlegible",system-ui,sans-serif}
+h1,h2,.stamp{font-family:"Bricolage Grotesque",system-ui,sans-serif}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.app{display:grid;grid-template-columns:320px minmax(0,1fr) 380px;min-height:100vh}
+.recorder{background:var(--housing);color:var(--housing-ink);padding:28px 24px;position:sticky;top:0;height:100vh;overflow:auto}
+h1{font-size:56px;line-height:1;margin:0 0 8px;font-weight:800;letter-spacing:-.03em}
+.lede{margin:0 0 24px;font-size:18px;line-height:1.35}
+.case{display:block;width:100%;text-align:left;background:none;border:0;border-top:2px solid var(--housing-ink);color:inherit;padding:12px 0}
+.case strong{display:block;font-size:18px}
+.case span{font-size:15px;line-height:1.3;display:block}
+.case[aria-pressed=true]{background:var(--housing-ink);color:#fff;padding-left:10px;padding-right:10px}
+.mode{font-size:14px;margin-top:20px}
+.tape{padding:32px clamp(16px,4vw,48px)}
+.tape h2{font-size:30px;margin:0 0 4px;font-weight:800;letter-spacing:-.01em}
+.order{margin:0 0 24px;color:var(--soft)}
+ol{list-style:none;margin:0;padding:0;position:relative}
+ol::before{content:"";position:absolute;left:15px;top:8px;bottom:8px;width:2px;background:var(--line)}
+li{position:relative;padding:0 0 18px 48px}
+li .n{position:absolute;left:0;top:0;width:32px;height:32px;border-radius:50%;background:var(--paper);border:2px solid var(--line);display:grid;place-items:center;font-size:14px;font-weight:700}
+li h3{margin:0;font-size:18px;line-height:1.75}
+li p{margin:2px 0 0;max-width:62ch}
+li .fp{font-size:13px;color:var(--soft)}
+li.cited .n{background:var(--housing);border-color:var(--housing)}
+li.cited h3{text-decoration:underline;text-decoration-color:var(--housing);text-decoration-thickness:3px;text-underline-offset:4px}
+li.broken .n{background:var(--bad);border-color:var(--bad);color:#fff}
+li.broken h3{color:var(--bad)}
+li.stop h3{color:var(--bad)}
+.hidden-text{background:#FFE9DC;padding:2px 6px}
+.enter{animation:in .28s both}
+@keyframes in{from{opacity:0;transform:translateX(-10px)}}
+.empty{max-width:46ch;font-size:20px;margin-top:20vh}
+.bench{background:var(--paper);border-left:2px solid var(--line);padding:32px 24px;position:sticky;top:0;height:100vh;overflow:auto}
+.stamp{display:inline-block;font-size:44px;line-height:1;font-weight:800;border:5px solid currentColor;border-radius:8px;padding:12px 16px;transform:rotate(-3deg);margin:8px 0 22px}
+.stamp.good{color:var(--good)}.stamp.bad{color:var(--bad)}.stamp.wait{color:var(--wait)}
+.stamp.drop{animation:stamp .34s cubic-bezier(.2,1.4,.5,1) both}
+@keyframes stamp{from{opacity:0;transform:rotate(-3deg) scale(2.2)}}
+.bench h2{font-size:22px;margin:0 0 8px}
+.bench p{margin:0 0 16px}
+.act{display:block;width:100%;padding:12px 14px;margin:0 0 10px;border-radius:6px;border:2px solid var(--ink);background:var(--ink);color:#fff;font-weight:700;text-align:center;text-decoration:none}
+.act.alt{background:none;color:var(--ink)}
+.act:disabled{opacity:.5;cursor:default}
+.seal{font-size:15px;color:var(--soft);margin-top:18px}
+.seal.bad{color:var(--bad);font-weight:700}
+.err{color:var(--bad)}
+@media(max-width:1080px){.app{grid-template-columns:1fr}.recorder,.bench{position:static;height:auto}.bench{border-left:0;border-top:2px solid var(--line)}.empty{margin-top:24px}h1{font-size:44px}}
+@media(prefers-reduced-motion:reduce){.enter,.stamp.drop{animation:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="recorder">
+    <h1>Witness</h1>
+    <p class="lede">The flight recorder for AI shopping agents. When a purchase goes wrong, it shows who was at fault and settles it through PayPal.</p>
+    <div id="cases"></div>
+    <p class="mode" id="mode"></p>
+  </aside>
+  <main class="tape" id="tape"><p class="empty">Choose a case to record an AI agent's purchase from start to finish.</p></main>
+  <section class="bench" id="bench" aria-live="polite"><h2>Ruling</h2><p>The ruling appears here after a claim is filed.</p></section>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let run=null,seen=0,busy=false,error='';
+const api=async(p,m='GET',b)=>{const r=await fetch(p,{method:m,headers:{'content-type':'application/json'},body:b&&JSON.stringify(b)});const j=await r.json();if(!r.ok)throw new Error(j.error);return j};
+const say={
+ mandate:d=>['Shopper signed the instruction',`"${esc(d.mandate.text)}"`],
+ hold_created:d=>['Spending limit requested from PayPal',`Limit $${d.limit}. Order ${esc(d.orderId)}.`],
+ hold_approved:d=>['PayPal is holding the limit',`Authorization ${esc(d.authorizationId)}. The agent cannot spend beyond it.`],
+ page_view:d=>['Agent read a store page',`${esc(d.store)}: ${esc(d.visibleText)}${d.hiddenText?`<br><span class="hidden-text">Hidden on the page: ${esc(d.hiddenText)}</span>`:''}`],
+ agent_decision:d=>[`Agent chose ${esc(d.listing.name)} at $${d.listing.price}`,`Its reasoning: ${esc(d.reasoning)}`],
+ gate:d=>[d.allowed?'Gate allowed the purchase':'Gate blocked the purchase',esc([...d.violations,...d.unverified].join(' ')||'Every rule was met.')],
+ hold_voided:()=>['PayPal hold released','No money moved.'],
+ payment:d=>[`PayPal captured $${d.amount}`,`Capture ${esc(d.captureId)}.`],
+ delivery:d=>['Order delivered',`Color ${esc(d.color)}, size ${esc(d.size)}.`],
+ claim:d=>['Buyer filed a claim',`"${esc(d.text)}"`],
+ verdict:d=>['Ruling recorded',esc(d.reasoning)],
+ refund:d=>[`PayPal refunded $${d.amount}`,`Refund ${esc(d.refundId)}.`]};
+const stamps={blocked:['Blocked','bad'],refunded:['Refunded','good'],denied:['Claim denied','bad'],review:['Sent to a person','wait'],refused:['Record rejected','bad'],cancelled:['Cancelled','wait']};
+const faults={agent:'The agent was at fault.',merchant:'The store was at fault.',buyer:'The buyer has no valid claim.',unknown:'Fault could not be decided.'};
+function draw(){
+ if(!run)return;
+ const cited=new Set(run.verdict?.cited||[]);
+ $('#tape').innerHTML=`<h2>${esc(window.cases.find(c=>c.id===run.scenarioId).title)}</h2><p class="order">Recorded purchase</p><ol>${run.entries.map(e=>{
+  const [t,b]=say[e.type](e.data);const stop=e.type==='gate'&&!e.data.allowed;
+  const broken=run.integrity.brokenAt===e.seq;
+  return `<li class="${cited.has(e.seq)?'cited ':''}${broken?'broken ':''}${stop?'stop ':''}${e.seq>seen?'enter':''}" style="animation-delay:${Math.max(0,e.seq-seen-1)*90}ms"><span class="n">${e.seq}</span><h3>${t}</h3><p>${b}</p><p class="fp">Fingerprint ${e.hash.slice(0,12)}${broken?', which no longer matches this entry':''}</p></li>`}).join('')}</ol>`;
+ const st=stamps[run.status];
+ const reason=run.status==='blocked'?run.entries.find(e=>e.type==='gate').data.violations.join(' ')+' The PayPal hold was released.':run.verdict?.reasoning;
+ let h=`<h2>Ruling</h2>`;
+ if(st)h+=`<div class="stamp ${st[1]} ${run.drop?'drop':''}">${st[0]}</div>`;
+ if(run.verdict)h+=`<h2>${faults[run.verdict.fault]}</h2>`;
+ if(reason)h+=`<p>${esc(reason)}</p>`;
+ if(run.verdict)h+=`<p class="seal">Decided by ${run.verdict.source==='ai'?'AI, checked against the recorded facts':run.verdict.source==='integrity'?'the record check':'the built-in rules'}. ${cited.size===1?'Step':'Steps'} ${[...cited].join(', ')} ${cited.size===1?'proves':'prove'} it.</p>`;
+ if(run.status==='awaiting_approval')h+=`<p>Approve the spending limit in PayPal so the agent can shop.</p><a class="act" href="${esc(run.approveUrl)}">Approve limit in PayPal</a>`;
+ if(run.status==='delivered')h+=`<p>The order arrived. The buyer is disputing it.</p><button class="act" id="claim" ${busy?'disabled':''}>File the buyer's claim</button><button class="act alt" id="tamper" ${busy||!run.integrity.ok?'disabled':''}>Rewrite the agent's reasoning</button>`;
+ if(error)h+=`<p class="err">${esc(error)}</p>`;
+ if(run.entries.length)h+=`<a class="act alt" href="/api/runs/${run.id}/evidence">Download evidence</a>`;
+ h+=run.integrity.ok?`<p class="seal">All ${run.entries.length} entries match their fingerprints.</p>`:`<p class="seal bad">Entry ${run.integrity.brokenAt} was changed after it was recorded.</p>`;
+ $('#bench').innerHTML=h;
+ $('#claim')&&($('#claim').onclick=()=>act('claim'));
+ $('#tamper')&&($('#tamper').onclick=()=>act('tamper'));
+ seen=run.entries.length;run.drop=false;
+}
+async function act(a){busy=true;error='';draw();try{run=await api(`/api/runs/${run.id}/${a}`,'POST');seen=a==='tamper'?seen:seen;run.drop=true}catch(e){error=e.message}busy=false;draw()}
+async function start(id){
+ document.querySelectorAll('.case').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===id));
+ seen=0;error='';
+ try{run=await api('/api/runs','POST',{scenario:id});run.drop=true;draw()}catch(e){$('#bench').innerHTML=`<h2>Ruling</h2><p class="err">${esc(e.message)}</p>`}
+}
+(async()=>{
+ const d=await api('/api/scenarios');window.cases=d.scenarios;
+ $('#cases').innerHTML=d.scenarios.map(c=>`<button class="case" aria-pressed="false" data-id="${c.id}"><strong>${esc(c.title)}</strong><span>${esc(c.summary)}</span></button>`).join('');
+ document.querySelectorAll('.case').forEach(b=>b.onclick=()=>start(b.dataset.id));
+ $('#mode').textContent=d.paypalMode==='sandbox'?'Payments: PayPal sandbox':'Payments: simulated. Add PayPal sandbox keys to use real sandbox calls.';
+ const id=new URLSearchParams(location.search).get('run');
+ if(id){try{run=await api('/api/runs/'+id);draw();document.querySelector(`[data-id=${run.scenarioId}]`).setAttribute('aria-pressed','true')}catch(e){}}
+})();
+</script>
+</body>
+</html>

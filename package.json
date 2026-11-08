@@ -1,0 +1,9 @@
+{
+  "name": "witness",
+  "version": "0.1.0",
+  "description": "A flight recorder and instant court for AI shopping agents, built on PayPal.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22.9" },
+  "scripts": { "start": "node --env-file-if-exists=.env src/server.js", "test": "node --test" }
+}
